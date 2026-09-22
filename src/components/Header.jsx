@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import {
   Search,
   ChevronDown,
@@ -12,22 +12,19 @@ import {
   LogIn,
   LockKeyhole,
   LogOut,
-  UserCircle
-} from 'lucide-react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useCart } from '../context/CartContext';
-import { products, categories } from '../data/products';
-import logo from '../assets/headerlogo33.png';
+  UserCircle,
+} from "lucide-react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useCart } from "../context/CartContext";
+import { products, categories } from "../data/products";
+import logo from "../assets/headerlogo33.png";
 
-const API_BASE_URL =
-  window.location.hostname === 'localhost'
-    ? 'http://localhost:8000'
-    : 'http://127.0.0.1:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const socialLinks = [
   {
-    label: 'Instagram',
-    href: 'https://www.instagram.com/_density_electronics?stkn=MW41ZjI2cncwaTQxYg==',
+    label: "Instagram",
+    href: "https://www.instagram.com/_density_electronics?stkn=MW41ZjI2cncwaTQxYg==",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -38,15 +35,15 @@ const socialLinks = [
         strokeLinejoin="round"
         className="w-[18px] h-[18px]"
       >
-        <rect x="2" y="2" width="20" height="20" rx="5"></rect>
-        <circle cx="12" cy="12" r="4"></circle>
-        <circle cx="17.5" cy="6.5" r="1"></circle>
+        <rect x="2" y="2" width="20" height="20" rx="5" />
+        <circle cx="12" cy="12" r="4" />
+        <circle cx="17.5" cy="6.5" r="1" />
       </svg>
-    )
+    ),
   },
   {
-    label: 'X',
-    href: 'https://x.com/densityelectro?s=11',
+    label: "X",
+    href: "https://x.com/densityelectro?s=11",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -55,11 +52,11 @@ const socialLinks = [
       >
         <path d="M18.9 2.5c-1 .5-2 .8-3.1 1.1A4.7 4.7 0 0 0 12.3 6v.4A10.8 10.8 0 0 1 3.8 3.9s-2.3 5.1 1.4 7.5a9.4 9.4 0 0 1-1.5.2c.4 1.8 2 3.2 4 3.6A9.7 9.7 0 0 1 2 18.7c2.7 1.8 6 2.2 9.2 1.2a13.5 13.5 0 0 0 9.4-9.1c.9-2.1.9-3.4.9-3.4s-.8.4-1.6.7Z" />
       </svg>
-    )
+    ),
   },
   {
-    label: 'WhatsApp',
-    href: 'https://wa.me/919890400165',
+    label: "WhatsApp",
+    href: "https://wa.me/919890400165",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -68,8 +65,8 @@ const socialLinks = [
       >
         <path d="M20.52 3.48A11.7 11.7 0 0 0 12.2 1a11.8 11.8 0 0 0-10.2 18l-1 3.7 3.8-1A11.8 11.8 0 0 0 12.22 23c6.5 0 11.8-5.3 11.8-11.8 0-3.1-1.2-6.1-3.48-8.72ZM12.2 21.1a9.7 9.7 0 0 1-5.1-1.4l-.36-.22-2.26.6.6-2.2-.23-.36A9.7 9.7 0 0 1 2.5 11.8a9.8 9.8 0 0 1 19.6 0 9.8 9.8 0 0 1-9.9 9.3Zm5.4-7.2c-.3-.15-1.7-.83-2-.93-.3-.1-.52-.15-.74.15-.22.3-.82.92-.99 1.1-.18.18-.36.2-.68.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.64-2.04-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.38-.02-.52-.08-.15-.74-1.8-.99-2.46-.26-.65-.52-.57-.72-.58l-.62-.01c-.21 0-.55.08-.84.38-.29.3-1.1 1.08-1.1 2.63s1.12 3.04 1.28 3.25c.15.2 2.2 3.36 5.34 4.7.75.32 1.33.52 1.79.66.75.24 1.43.2 1.97.12.6-.09 1.76-.72 2.01-1.42.25-.7.25-1.3.18-1.43-.07-.13-.27-.22-.57-.38Z" />
       </svg>
-    )
-  }
+    ),
+  },
 ];
 
 export default function Header() {
@@ -82,15 +79,18 @@ export default function Header() {
     0
   );
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const searchContainerRef = useRef(null);
   const mobileSearchContainerRef = useRef(null);
+
   const mobileMenuRef = useRef(null);
   const mobileMenuButtonRef = useRef(null);
-  const accountMenuRef = useRef(null);
+
+  const mobileAccountMenuRef = useRef(null);
+  const desktopAccountMenuRef = useRef(null);
 
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -99,39 +99,121 @@ export default function Header() {
   const [currentUser, setCurrentUser] = useState(null);
 
   // ============================================================
+  // CUSTOMER NAME
+  // ============================================================
+
+  const getCustomerName = (user) => {
+    if (!user) return "Customer";
+
+    if (
+      user.name &&
+      typeof user.name === "string" &&
+      user.name.trim()
+    ) {
+      return user.name.trim();
+    }
+
+    if (
+      user.first_name &&
+      typeof user.first_name === "string" &&
+      user.first_name.trim()
+    ) {
+      return user.first_name.trim();
+    }
+
+    if (
+      user.username &&
+      typeof user.username === "string" &&
+      user.username.trim()
+    ) {
+      return user.username.trim();
+    }
+
+    if (
+      user.email &&
+      typeof user.email === "string" &&
+      user.email.includes("@")
+    ) {
+      return user.email.split("@")[0];
+    }
+
+    return "Customer";
+  };
+
+  // ============================================================
   // CHECK CURRENT CUSTOMER
   // ============================================================
 
-  useEffect(() => {
-    const checkCurrentUser = async () => {
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/api/orders/current-user/`,
-          {
-            method: 'GET',
-            credentials: 'include'
-          }
-        );
-
-        if (response.ok) {
-          const data = await response.json();
-
-          if (data.success && data.authenticated) {
-            setCurrentUser(data.user);
-          } else {
-            setCurrentUser(null);
-          }
-        } else {
-          setCurrentUser(null);
+  const checkCurrentUser = async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/api/orders/current-user/`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            Accept: "application/json",
+          },
         }
-      } catch (error) {
-        console.error('CURRENT USER ERROR:', error);
+      );
+
+      if (!response.ok) {
+        setCurrentUser(null);
+        return;
+      }
+
+      const data = await response.json();
+
+      console.log("CURRENT USER RESPONSE:", data);
+
+      if (
+        data.success &&
+        data.authenticated &&
+        data.user
+      ) {
+        setCurrentUser(data.user);
+      } else {
         setCurrentUser(null);
       }
-    };
+    } catch (error) {
+      console.error("CURRENT USER ERROR:", error);
+      setCurrentUser(null);
+    }
+  };
 
+  // ============================================================
+  // LOAD CURRENT CUSTOMER
+  // ============================================================
+
+  useEffect(() => {
     checkCurrentUser();
   }, [location.pathname]);
+
+  // ============================================================
+  // LOGIN / REGISTER EVENT
+  // ============================================================
+
+  useEffect(() => {
+    const handleCustomerAuthChanged = () => {
+      console.log("CUSTOMER AUTH CHANGED");
+
+      setTimeout(() => {
+        checkCurrentUser();
+      }, 100);
+    };
+
+    window.addEventListener(
+      "customer-auth-changed",
+      handleCustomerAuthChanged
+    );
+
+    return () => {
+      window.removeEventListener(
+        "customer-auth-changed",
+        handleCustomerAuthChanged
+      );
+    };
+  }, []);
 
   // ============================================================
   // SEARCH SUGGESTIONS
@@ -143,7 +225,9 @@ export default function Header() {
 
       const matches = products
         .filter((p) => {
-          const nameMatch = p.name?.toLowerCase().includes(query);
+          const nameMatch = p.name
+            ?.toLowerCase()
+            .includes(query);
 
           const categoryMatch = p.category
             ?.toLowerCase()
@@ -157,7 +241,9 @@ export default function Header() {
             ?.toLowerCase()
             .includes(query);
 
-          const idMatch = p.id?.toLowerCase().includes(query);
+          const idMatch = p.id
+            ?.toLowerCase()
+            .includes(query);
 
           return (
             nameMatch ||
@@ -187,20 +273,22 @@ export default function Header() {
         searchContainerRef.current &&
         !searchContainerRef.current.contains(e.target) &&
         (!mobileSearchContainerRef.current ||
-          !mobileSearchContainerRef.current.contains(e.target))
+          !mobileSearchContainerRef.current.contains(
+            e.target
+          ))
       ) {
         setShowSuggestions(false);
       }
     };
 
     document.addEventListener(
-      'mousedown',
+      "mousedown",
       handleClickOutsideSearch
     );
 
     return () => {
       document.removeEventListener(
-        'mousedown',
+        "mousedown",
         handleClickOutsideSearch
       );
     };
@@ -212,22 +300,29 @@ export default function Header() {
 
   useEffect(() => {
     const handleAccountOutsideClick = (event) => {
-      if (
-        accountMenuRef.current &&
-        !accountMenuRef.current.contains(event.target)
-      ) {
+      const clickedInsideMobile =
+        mobileAccountMenuRef.current?.contains(
+          event.target
+        );
+
+      const clickedInsideDesktop =
+        desktopAccountMenuRef.current?.contains(
+          event.target
+        );
+
+      if (!clickedInsideMobile && !clickedInsideDesktop) {
         setIsAccountMenuOpen(false);
       }
     };
 
     document.addEventListener(
-      'mousedown',
+      "mousedown",
       handleAccountOutsideClick
     );
 
     return () => {
       document.removeEventListener(
-        'mousedown',
+        "mousedown",
         handleAccountOutsideClick
       );
     };
@@ -248,11 +343,11 @@ export default function Header() {
 
   useEffect(() => {
     document.body.style.overflow = isMobileMenuOpen
-      ? 'hidden'
-      : '';
+      ? "hidden"
+      : "";
 
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, [isMobileMenuOpen]);
 
@@ -268,36 +363,38 @@ export default function Header() {
         mobileMenuRef.current &&
         !mobileMenuRef.current.contains(event.target) &&
         mobileMenuButtonRef.current &&
-        !mobileMenuButtonRef.current.contains(event.target)
+        !mobileMenuButtonRef.current.contains(
+          event.target
+        )
       ) {
         setIsMobileMenuOpen(false);
       }
     };
 
     const handleEscape = (event) => {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         setIsMobileMenuOpen(false);
       }
     };
 
     document.addEventListener(
-      'mousedown',
+      "mousedown",
       handleMenuOutsideClick
     );
 
     document.addEventListener(
-      'keydown',
+      "keydown",
       handleEscape
     );
 
     return () => {
       document.removeEventListener(
-        'mousedown',
+        "mousedown",
         handleMenuOutsideClick
       );
 
       document.removeEventListener(
-        'keydown',
+        "keydown",
         handleEscape
       );
     };
@@ -328,7 +425,7 @@ export default function Header() {
 
   const handleSelectProduct = (slug) => {
     setShowSuggestions(false);
-    setSearchQuery('');
+    setSearchQuery("");
     setIsMobileMenuOpen(false);
 
     navigate(`/product/${slug}`);
@@ -342,20 +439,20 @@ export default function Header() {
     e.preventDefault();
     setIsMobileMenuOpen(false);
 
-    if (location.pathname === '/') {
+    if (location.pathname === "/") {
       document
         .getElementById(id)
         ?.scrollIntoView({
-          behavior: 'smooth'
+          behavior: "smooth",
         });
     } else {
-      navigate('/');
+      navigate("/");
 
       setTimeout(() => {
         document
           .getElementById(id)
           ?.scrollIntoView({
-            behavior: 'smooth'
+            behavior: "smooth",
           });
       }, 200);
     }
@@ -369,21 +466,21 @@ export default function Header() {
     e.preventDefault();
     setIsMobileMenuOpen(false);
 
-    if (location.pathname === '/') {
+    if (location.pathname === "/") {
       window.scrollTo({
         top: 0,
-        behavior: 'smooth'
+        behavior: "smooth",
       });
 
       return;
     }
 
-    navigate('/');
+    navigate("/");
 
     setTimeout(() => {
       window.scrollTo({
         top: 0,
-        behavior: 'smooth'
+        behavior: "smooth",
       });
     }, 50);
   };
@@ -397,17 +494,22 @@ export default function Header() {
       await fetch(
         `${API_BASE_URL}/api/orders/logout/`,
         {
-          method: 'POST',
-          credentials: 'include'
+          method: "POST",
+          credentials: "include",
         }
       );
     } catch (error) {
-      console.error('LOGOUT ERROR:', error);
+      console.error("LOGOUT ERROR:", error);
     } finally {
       setCurrentUser(null);
       setIsAccountMenuOpen(false);
       setIsMobileMenuOpen(false);
-      navigate('/');
+
+      window.dispatchEvent(
+        new Event("customer-auth-changed")
+      );
+
+      navigate("/");
     }
   };
 
@@ -424,10 +526,12 @@ export default function Header() {
         tabIndex={isMobileMenuOpen ? 0 : -1}
         className={`fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-[9998] transition-opacity duration-300 lg:hidden ${
           isMobileMenuOpen
-            ? 'opacity-100 visible'
-            : 'opacity-0 invisible pointer-events-none'
+            ? "opacity-100 visible"
+            : "opacity-0 invisible pointer-events-none"
         }`}
-        onClick={() => setIsMobileMenuOpen(false)}
+        onClick={() =>
+          setIsMobileMenuOpen(false)
+        }
       />
 
       <aside
@@ -435,8 +539,8 @@ export default function Header() {
         aria-label="Mobile navigation"
         className={`fixed top-0 right-0 h-[100dvh] w-[85%] max-w-sm bg-slate-900 text-white z-[9999] flex flex-col shadow-2xl overflow-y-auto overscroll-contain transition-transform duration-300 ease-in-out transform-gpu lg:hidden ${
           isMobileMenuOpen
-            ? 'translate-x-0 pointer-events-auto'
-            : 'translate-x-full pointer-events-none'
+            ? "translate-x-0 pointer-events-auto"
+            : "translate-x-full pointer-events-none"
         }`}
       >
         {/* MOBILE HEADER */}
@@ -466,9 +570,7 @@ export default function Header() {
         <div className="p-4 border-b border-slate-700">
           {currentUser ? (
             <div className="bg-slate-800 rounded-xl p-4">
-
               <div className="flex items-center gap-3 mb-4">
-
                 <div className="w-11 h-11 rounded-full bg-orange-500 flex items-center justify-center">
                   <UserCircle
                     size={25}
@@ -477,17 +579,14 @@ export default function Header() {
                 </div>
 
                 <div className="min-w-0">
-
                   <p className="text-white font-black text-sm truncate">
-                    {currentUser.name || 'Customer'}
+                    {getCustomerName(currentUser)}
                   </p>
 
                   <p className="text-slate-400 text-xs truncate">
                     {currentUser.email}
                   </p>
-
                 </div>
-
               </div>
 
               <button
@@ -498,11 +597,9 @@ export default function Header() {
                 <LogOut size={16} />
                 Logout
               </button>
-
             </div>
           ) : (
             <div className="space-y-2">
-
               <Link
                 to="/login"
                 onClick={() =>
@@ -535,7 +632,6 @@ export default function Header() {
                 <LockKeyhole size={18} />
                 Admin Login
               </Link>
-
             </div>
           )}
         </div>
@@ -548,31 +644,31 @@ export default function Header() {
         >
           {[
             {
-              name: 'Home',
-              path: '/'
+              name: "Home",
+              path: "/",
             },
             {
-              name: 'Categories',
-              path: '/categories'
+              name: "Categories",
+              path: "/categories",
             },
             {
-              name: 'Products / Shop',
-              path: '/shop',
-              highlight: true
+              name: "Products / Shop",
+              path: "/shop",
+              highlight: true,
             },
             {
-              name: 'Bulk Enquiries',
-              path: '/bulk',
-              highlight: true
+              name: "Bulk Enquiries",
+              path: "/bulk",
+              highlight: true,
             },
             {
-              name: 'Sell on Density',
-              path: '/sell'
+              name: "Sell on Density",
+              path: "/sell",
             },
             {
-              name: 'About Us',
-              path: '/about'
-            }
+              name: "About Us",
+              path: "/about",
+            },
           ].map((link) => (
             <Link
               key={link.path}
@@ -582,8 +678,8 @@ export default function Header() {
               }
               className={`min-h-12 flex items-center justify-between px-3 border-b border-slate-800 font-bold text-[15px] transition-colors hover:bg-slate-800 active:bg-slate-800 ${
                 link.highlight
-                  ? 'text-orange-400'
-                  : 'text-slate-200'
+                  ? "text-orange-400"
+                  : "text-slate-200"
               }`}
             >
               {link.name}
@@ -600,7 +696,7 @@ export default function Header() {
             onClick={(e) =>
               handleScrollToSection(
                 e,
-                'footer'
+                "footer"
               )
             }
             className="min-h-12 w-full flex items-center justify-between px-3 border-b border-slate-800 font-bold text-[15px] text-slate-200 text-left transition-colors hover:bg-slate-800 active:bg-slate-800"
@@ -617,7 +713,6 @@ export default function Header() {
         {/* MOBILE BOTTOM */}
 
         <div className="border-t border-slate-700 p-4 space-y-2">
-
           <a
             href="tel:+919890400165"
             onClick={() =>
@@ -661,7 +756,6 @@ export default function Header() {
               {cartItemCount}
             </span>
           </Link>
-
         </div>
       </aside>
     </>,
@@ -680,7 +774,6 @@ export default function Header() {
         {/* LOGO + MOBILE ICONS */}
 
         <div className="flex items-center justify-between w-full lg:w-auto">
-
           <a
             href="/"
             onClick={handleLogoClick}
@@ -716,13 +809,12 @@ export default function Header() {
               )}
             </Link>
 
-            {/* MOBILE ACCOUNT ICON */}
+            {/* MOBILE ACCOUNT */}
 
             <div
-              ref={accountMenuRef}
+              ref={mobileAccountMenuRef}
               className="relative"
             >
-
               <button
                 type="button"
                 onClick={() =>
@@ -755,32 +847,30 @@ export default function Header() {
                   {currentUser ? (
                     <>
                       <div className="px-4 py-4 bg-slate-900 text-white">
-
                         <div className="flex items-center gap-3">
-
                           <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center">
                             <UserCircle size={22} />
                           </div>
 
                           <div className="min-w-0">
-
                             <p className="font-black text-sm truncate">
-                              {currentUser.name || 'Customer'}
+                              {getCustomerName(
+                                currentUser
+                              )}
                             </p>
 
                             <p className="text-[11px] text-slate-400 truncate">
                               {currentUser.email}
                             </p>
-
                           </div>
-
                         </div>
-
                       </div>
 
                       <button
                         type="button"
-                        onClick={handleCustomerLogout}
+                        onClick={
+                          handleCustomerLogout
+                        }
                         className="w-full px-4 py-3 flex items-center gap-3 text-red-600 hover:bg-red-50 font-black text-xs uppercase tracking-widest transition-colors"
                       >
                         <LogOut size={17} />
@@ -790,15 +880,13 @@ export default function Header() {
                   ) : (
                     <>
                       <div className="px-4 py-3 bg-slate-900 text-white">
-
                         <p className="font-black text-sm">
-                          Density Electronics
+                          My Account
                         </p>
 
                         <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-widest">
-                          Account Access
+                          Density Electronics
                         </p>
-
                       </div>
 
                       <Link
@@ -835,10 +923,8 @@ export default function Header() {
                       </Link>
                     </>
                   )}
-
                 </div>
               )}
-
             </div>
 
             {/* MENU */}
@@ -855,7 +941,6 @@ export default function Header() {
             >
               <Menu size={32} />
             </button>
-
           </div>
         </div>
 
@@ -865,12 +950,10 @@ export default function Header() {
           ref={searchContainerRef}
           className="w-full lg:flex-1 lg:max-w-3xl relative order-last lg:order-none pb-2 lg:pb-0"
         >
-
           <form
             onSubmit={handleSearchSubmit}
             className="flex items-center w-full bg-white rounded-md overflow-hidden shadow-inner h-12 border-2 border-transparent focus-within:border-blue-600 transition-colors"
           >
-
             <input
               type="text"
               value={searchQuery}
@@ -894,7 +977,6 @@ export default function Header() {
                 strokeWidth={2.5}
               />
             </button>
-
           </form>
 
           {/* SEARCH SUGGESTIONS */}
@@ -902,7 +984,6 @@ export default function Header() {
           {showSuggestions &&
             suggestions.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-2xl z-50 overflow-hidden">
-
                 {suggestions.map((product) => (
                   <div
                     key={product.id}
@@ -913,9 +994,7 @@ export default function Header() {
                     }
                     className="px-4 py-3 hover:bg-blue-50 cursor-pointer flex items-center justify-between border-b border-gray-100 last:border-0 text-black transition-colors"
                   >
-
                     <div className="flex items-center gap-3">
-
                       <img
                         src={product.image}
                         alt={product.name}
@@ -924,32 +1003,26 @@ export default function Header() {
                       />
 
                       <div>
-
                         <span className="text-[13px] font-bold block truncate max-w-[250px]">
                           {product.name}
                         </span>
 
                         <span className="text-[10px] text-gray-500 font-mono uppercase">
-                          P/N:{' '}
+                          P/N:{" "}
                           {product.specifications
                             ?.partNumber ||
                             product.id}
                         </span>
-
                       </div>
-
                     </div>
 
                     <span className="font-black text-[#2563eb] text-sm shrink-0">
                       ₹{product.price.toFixed(2)}
                     </span>
-
                   </div>
                 ))}
-
               </div>
             )}
-
         </div>
 
         {/* ====================================================
@@ -961,7 +1034,6 @@ export default function Header() {
           {/* SOCIAL */}
 
           <div className="flex items-center gap-3 text-gray-400">
-
             {socialLinks.map((social) => (
               <a
                 key={social.label}
@@ -975,7 +1047,6 @@ export default function Header() {
                 {social.icon}
               </a>
             ))}
-
           </div>
 
           <div className="h-6 w-[1px] bg-gray-700"></div>
@@ -986,7 +1057,6 @@ export default function Header() {
             to="/cart"
             className="flex items-center gap-2 hover:text-[#ffb700] transition-colors relative group"
           >
-
             <ShoppingCart
               size={24}
               className="group-hover:scale-110 transition-transform"
@@ -1001,16 +1071,14 @@ export default function Header() {
                 {cartItemCount}
               </span>
             )}
-
           </Link>
 
           {/* DESKTOP ACCOUNT */}
 
           <div
-            ref={accountMenuRef}
+            ref={desktopAccountMenuRef}
             className="relative"
           >
-
             <button
               type="button"
               onClick={() =>
@@ -1022,7 +1090,6 @@ export default function Header() {
               aria-label="Account Menu"
               title="Account"
             >
-
               {currentUser ? (
                 <UserRound
                   size={21}
@@ -1037,21 +1104,25 @@ export default function Header() {
                 />
               )}
 
-              <span className="font-semibold text-[13px]">
+              {/* IMPORTANT:
+                  LOGGED IN = CUSTOMER NAME
+                  LOGGED OUT = MY ACCOUNT
+              */}
+
+              <span className="font-semibold text-[13px] max-w-[150px] truncate">
                 {currentUser
-                  ? currentUser.name || 'Account'
-                  : 'Account'}
+                  ? getCustomerName(currentUser)
+                  : "My Account"}
               </span>
 
               <ChevronDown
                 size={14}
                 className={`transition-transform ${
                   isAccountMenuOpen
-                    ? 'rotate-180'
-                    : ''
+                    ? "rotate-180"
+                    : ""
                 }`}
               />
-
             </button>
 
             {/* DESKTOP DROPDOWN */}
@@ -1061,66 +1132,88 @@ export default function Header() {
 
                 {currentUser ? (
                   <>
+                    {/* LOGGED IN CUSTOMER */}
+
                     <div className="px-5 py-5 bg-slate-900 text-white">
-
                       <div className="flex items-center gap-3">
-
                         <div className="w-12 h-12 rounded-full bg-orange-500 flex items-center justify-center shrink-0">
                           <UserCircle size={27} />
                         </div>
 
                         <div className="min-w-0">
-
-                          <p className="font-black text-sm truncate">
-                            {currentUser.name || 'Customer'}
+                          <p className="font-black text-base truncate">
+                            {getCustomerName(
+                              currentUser
+                            )}
                           </p>
 
                           <p className="text-[11px] text-slate-400 truncate mt-1">
                             {currentUser.email}
                           </p>
-
                         </div>
-
                       </div>
-
                     </div>
 
+                    {/* MY ACCOUNT */}
+
+                    <div className="px-5 py-4 border-b border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <UserRound
+                          size={18}
+                          className="text-blue-600"
+                        />
+
+                        <div>
+                          <p className="text-xs font-black text-slate-800">
+                            My Account
+                          </p>
+
+                          <p className="text-[10px] text-gray-400 mt-1">
+                            Welcome,{" "}
+                            {getCustomerName(
+                              currentUser
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* LOGIN STATUS */}
+
                     <div className="px-5 py-3 border-b border-gray-100">
-
                       <div className="flex items-center gap-2 text-green-600">
-
                         <span className="w-2 h-2 rounded-full bg-green-500"></span>
 
                         <span className="text-[10px] font-black uppercase tracking-widest">
                           Logged In
                         </span>
-
                       </div>
-
                     </div>
+
+                    {/* LOGOUT */}
 
                     <button
                       type="button"
-                      onClick={handleCustomerLogout}
+                      onClick={
+                        handleCustomerLogout
+                      }
                       className="w-full px-5 py-4 flex items-center gap-3 text-red-600 hover:bg-red-50 font-black text-xs uppercase tracking-widest transition-colors"
                     >
                       <LogOut size={18} />
                       Logout
                     </button>
-
                   </>
                 ) : (
                   <>
+                    {/* NOT LOGGED IN */}
+
                     <div className="px-5 py-4 bg-slate-900 text-white">
-
                       <div className="flex items-center gap-3">
-
                         <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center">
                           <UserRound size={22} />
                         </div>
 
                         <div>
-
                           <p className="font-black text-sm">
                             My Account
                           </p>
@@ -1128,11 +1221,8 @@ export default function Header() {
                           <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">
                             Density Electronics
                           </p>
-
                         </div>
-
                       </div>
-
                     </div>
 
                     {/* CUSTOMER LOGIN */}
@@ -1144,7 +1234,6 @@ export default function Header() {
                       }
                       className="px-5 py-4 flex items-center gap-3 text-slate-800 hover:bg-orange-50 hover:text-orange-600 border-b border-gray-100 transition-colors"
                     >
-
                       <div className="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center">
                         <LogIn
                           size={18}
@@ -1153,7 +1242,6 @@ export default function Header() {
                       </div>
 
                       <div>
-
                         <p className="font-black text-xs uppercase tracking-widest">
                           Customer Login
                         </p>
@@ -1161,9 +1249,7 @@ export default function Header() {
                         <p className="text-[10px] text-gray-400 mt-1">
                           Login to purchase products
                         </p>
-
                       </div>
-
                     </Link>
 
                     {/* REGISTER */}
@@ -1175,7 +1261,6 @@ export default function Header() {
                       }
                       className="px-5 py-4 flex items-center gap-3 text-slate-800 hover:bg-blue-50 hover:text-blue-600 border-b border-gray-100 transition-colors"
                     >
-
                       <div className="w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
                         <UserPlus
                           size={18}
@@ -1184,7 +1269,6 @@ export default function Header() {
                       </div>
 
                       <div>
-
                         <p className="font-black text-xs uppercase tracking-widest">
                           Register
                         </p>
@@ -1192,9 +1276,7 @@ export default function Header() {
                         <p className="text-[10px] text-gray-400 mt-1">
                           Create your customer account
                         </p>
-
                       </div>
-
                     </Link>
 
                     {/* ADMIN LOGIN */}
@@ -1206,7 +1288,6 @@ export default function Header() {
                       }
                       className="px-5 py-4 flex items-center gap-3 text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-colors"
                     >
-
                       <div className="w-9 h-9 rounded-lg bg-slate-100 flex items-center justify-center">
                         <LockKeyhole
                           size={18}
@@ -1215,7 +1296,6 @@ export default function Header() {
                       </div>
 
                       <div>
-
                         <p className="font-black text-xs uppercase tracking-widest">
                           Admin Login
                         </p>
@@ -1223,19 +1303,13 @@ export default function Header() {
                         <p className="text-[10px] text-gray-400 mt-1">
                           Administrator access
                         </p>
-
                       </div>
-
                     </Link>
-
                   </>
                 )}
-
               </div>
             )}
-
           </div>
-
         </div>
       </div>
 
@@ -1244,7 +1318,6 @@ export default function Header() {
       ====================================================== */}
 
       <div className="hidden lg:block bg-[#020617] border-t border-gray-800/50">
-
         <div className="max-w-[1500px] mx-auto px-6 lg:px-8 h-12 flex items-center gap-8 relative">
 
           {/* CATEGORIES */}
@@ -1258,9 +1331,7 @@ export default function Header() {
               setIsCategoryOpen(false)
             }
           >
-
             <button className="flex items-center gap-2 text-white font-bold text-[13px] hover:text-orange-500 transition-colors cursor-pointer h-full border-b-2 border-transparent hover:border-orange-500">
-
               <Menu size={18} />
 
               All Categories
@@ -1270,16 +1341,14 @@ export default function Header() {
                 className="ml-1 transition-transform"
                 style={{
                   transform: isCategoryOpen
-                    ? 'rotate(180deg)'
-                    : 'rotate(0)'
+                    ? "rotate(180deg)"
+                    : "rotate(0)",
                 }}
               />
-
             </button>
 
             {isCategoryOpen && categories && (
               <div className="absolute top-full left-0 w-64 bg-white border border-gray-200 shadow-xl z-50 rounded-b-lg overflow-hidden animate-in fade-in duration-200">
-
                 {categories
                   .slice(0, 8)
                   .map((cat) => (
@@ -1306,16 +1375,13 @@ export default function Header() {
                 >
                   View All Categories →
                 </Link>
-
               </div>
             )}
-
           </div>
 
           {/* MAIN NAVIGATION */}
 
           <nav className="flex items-center h-full gap-8 text-[13px] font-bold text-gray-300">
-
             <Link
               to="/"
               className="text-white border-b-2 border-orange-500 h-full flex items-center transition-colors"
@@ -1341,7 +1407,7 @@ export default function Header() {
               onClick={(e) =>
                 handleScrollToSection(
                   e,
-                  'brands'
+                  "brands"
                 )
               }
               className="hover:text-white transition-colors cursor-pointer"
@@ -1381,21 +1447,18 @@ export default function Header() {
               onClick={(e) =>
                 handleScrollToSection(
                   e,
-                  'footer'
+                  "footer"
                 )
               }
               className="hover:text-white transition-colors cursor-pointer"
             >
               Contact
             </button>
-
           </nav>
-
         </div>
       </div>
 
       {mobileNavigation}
-
     </header>
   );
 }

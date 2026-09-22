@@ -16,10 +16,7 @@ import {
 import toast from "react-hot-toast";
 import logo from "../assets/headerlogo33.png";
 
-const API_BASE_URL =
-  window.location.hostname === "localhost"
-    ? "http://localhost:8000"
-    : "http://127.0.0.1:8000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -82,7 +79,13 @@ export default function Login() {
         }
       );
 
-      const data = await response.json();
+      let data = {};
+
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error("LOGIN RESPONSE JSON ERROR:", jsonError);
+      }
 
       if (!response.ok || !data.success) {
         toast.error(
@@ -100,11 +103,24 @@ export default function Login() {
         password: "",
       });
 
+      /*
+        Login successful.
+
+        Tell Header.jsx that customer authentication
+        has changed so it can refresh the logged-in user.
+      */
+      window.dispatchEvent(
+        new Event("customer-auth-changed")
+      );
+
+      /*
+        Small delay so the success toast can be seen.
+        Then navigate to the previous page.
+      */
       setTimeout(() => {
-        navigate(returnTo, {
-          replace: true,
-        });
+        navigate(returnTo, { replace: true });
       }, 800);
+
     } catch (error) {
       console.error("LOGIN ERROR:", error);
 
@@ -204,6 +220,7 @@ export default function Login() {
                         <p className="text-white text-sm font-bold">
                           Your Shopping
                         </p>
+
                         <p className="text-slate-500 text-xs">
                           Continue where you left off
                         </p>
@@ -222,6 +239,7 @@ export default function Login() {
                         <p className="text-white text-sm font-bold">
                           Secure Login
                         </p>
+
                         <p className="text-slate-500 text-xs">
                           Protected account session
                         </p>
@@ -240,6 +258,7 @@ export default function Login() {
                         <p className="text-white text-sm font-bold">
                           Easy Checkout
                         </p>
+
                         <p className="text-slate-500 text-xs">
                           Faster and simpler shopping
                         </p>

@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
+
 import { useNavigate, Link } from "react-router-dom";
+
 import { useCart } from "../context/CartContext";
+
 import {
   ArrowLeft,
   User,
@@ -11,15 +14,19 @@ import {
   Receipt,
   FileText,
 } from "lucide-react";
+
 import toast from "react-hot-toast";
 
-// Django API
-const API_BASE_URL =
-  window.location.hostname === "localhost"
-    ? "http://localhost:8000"
-    : "http://127.0.0.1:8000";
+// ============================================================
+// DJANGO API
+// ============================================================
 
-// Indian States and major cities
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+// ============================================================
+// INDIAN STATES AND MAJOR CITIES
+// ============================================================
+
 const INDIA_STATES_CITIES = {
   Maharashtra: [
     "Mumbai",
@@ -29,7 +36,6 @@ const INDIA_STATES_CITIES = {
     "Aurangabad",
     "Solapur",
   ],
-
   Karnataka: [
     "Bengaluru",
     "Mysuru",
@@ -37,13 +43,11 @@ const INDIA_STATES_CITIES = {
     "Mangaluru",
     "Belagavi",
   ],
-
   Delhi: [
     "New Delhi",
     "North Delhi",
     "South Delhi",
   ],
-
   Gujarat: [
     "Ahmedabad",
     "Surat",
@@ -51,7 +55,6 @@ const INDIA_STATES_CITIES = {
     "Rajkot",
     "Bhavnagar",
   ],
-
   "Tamil Nadu": [
     "Chennai",
     "Coimbatore",
@@ -59,13 +62,11 @@ const INDIA_STATES_CITIES = {
     "Tiruchirappalli",
     "Salem",
   ],
-
   Telangana: [
     "Hyderabad",
     "Warangal",
     "Nizamabad",
   ],
-
   "Uttar Pradesh": [
     "Lucknow",
     "Kanpur",
@@ -73,7 +74,6 @@ const INDIA_STATES_CITIES = {
     "Agra",
     "Varanasi",
   ],
-
   "West Bengal": [
     "Kolkata",
     "Howrah",
@@ -86,7 +86,15 @@ export default function Checkout() {
   const { cartItems } = useCart();
   const navigate = useNavigate();
 
+  // ============================================================
+  // LOGIN CHECK
+  // ============================================================
+
   const [checkingLogin, setCheckingLogin] = useState(true);
+
+  // ============================================================
+  // FORM DATA
+  // ============================================================
 
   const [formData, setFormData] = useState({
     companyName: "",
@@ -104,7 +112,7 @@ export default function Checkout() {
   const [availableCities, setAvailableCities] = useState([]);
 
   // ============================================================
-  // LOGIN CHECK
+  // CHECK LOGIN
   // ============================================================
 
   useEffect(() => {
@@ -119,13 +127,10 @@ export default function Checkout() {
         );
 
         if (!response.ok) {
-          toast.error("Please login before purchasing.");
-
           navigate("/login", {
             replace: true,
             state: {
               from: "/checkout",
-              message: "Please login before purchasing.",
             },
           });
 
@@ -134,9 +139,7 @@ export default function Checkout() {
 
         const data = await response.json();
 
-        if (!data.success || !data.authenticated) {
-          toast.error("Please login before purchasing.");
-
+        if (!data.authenticated) {
           navigate("/login", {
             replace: true,
             state: {
@@ -147,16 +150,10 @@ export default function Checkout() {
           return;
         }
 
-        // Logged-in user's basic information
-        setFormData((prev) => ({
-          ...prev,
-          name: data.user?.name || "",
-          email: data.user?.email || "",
-        }));
+        // Login successful
+        setCheckingLogin(false);
       } catch (error) {
-        console.error("LOGIN CHECK ERROR:", error);
-
-        toast.error("Please login before purchasing.");
+        console.error("Login check error:", error);
 
         navigate("/login", {
           replace: true,
@@ -164,8 +161,6 @@ export default function Checkout() {
             from: "/checkout",
           },
         });
-      } finally {
-        setCheckingLogin(false);
       }
     };
 
@@ -173,21 +168,13 @@ export default function Checkout() {
   }, [navigate]);
 
   // ============================================================
-  // REDIRECT IF CART IS EMPTY
-  // ============================================================
-
-  useEffect(() => {
-    if (!checkingLogin && cartItems.length === 0) {
-      navigate("/cart");
-    }
-  }, [cartItems, navigate, checkingLogin]);
-
-  // ============================================================
   // LOAD SAVED CUSTOMER DATA
   // ============================================================
 
   useEffect(() => {
-    const saved = localStorage.getItem("density_b2b_customer");
+    const saved = localStorage.getItem(
+      "density_b2b_customer"
+    );
 
     if (saved) {
       try {
@@ -208,10 +195,74 @@ export default function Checkout() {
           );
         }
       } catch {
-        localStorage.removeItem("density_b2b_customer");
+        localStorage.removeItem(
+          "density_b2b_customer"
+        );
       }
     }
   }, []);
+
+  // ============================================================
+  // LOAD LOGGED-IN CUSTOMER
+  // ============================================================
+
+  useEffect(() => {
+    const loadLoggedInCustomer = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/api/orders/current-user/`,
+          {
+            method: "GET",
+            credentials: "include",
+          }
+        );
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+
+        if (
+          data.success &&
+          data.authenticated &&
+          data.user
+        ) {
+          setFormData((prev) => ({
+            ...prev,
+
+            name:
+              prev.name ||
+              data.user.name ||
+              data.user.first_name ||
+              "",
+
+            email:
+              prev.email ||
+              data.user.email ||
+              "",
+          }));
+        }
+      } catch (error) {
+        console.log(
+          "Unable to load customer information.",
+          error
+        );
+      }
+    };
+
+    loadLoggedInCustomer();
+  }, []);
+
+  // ============================================================
+  // REDIRECT IF CART IS EMPTY
+  // ============================================================
+
+  useEffect(() => {
+    if (!checkingLogin && cartItems.length === 0) {
+      navigate("/cart");
+    }
+  }, [cartItems, navigate, checkingLogin]);
 
   // ============================================================
   // CART CALCULATIONS
@@ -219,12 +270,16 @@ export default function Checkout() {
 
   const subtotal = cartItems.reduce(
     (sum, item) =>
-      sum + Number(item.price) * Number(item.quantity),
+      sum +
+      Number(item.price) *
+        Number(item.quantity),
     0
   );
 
   const shipping =
-    subtotal >= 999 || subtotal === 0 ? 0 : 50;
+    subtotal >= 999 || subtotal === 0
+      ? 0
+      : 50;
 
   const total = subtotal + shipping;
 
@@ -233,20 +288,32 @@ export default function Checkout() {
   // ============================================================
 
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const {
+      name,
+      value,
+      type,
+      checked,
+    } = e.target;
 
     const normalizedValue =
       name === "phone"
         ? value
-            .replace(/\+91\s?/g, "")
+            .replace(/^\+91\s?/, "")
             .replace(/\s+/g, "")
             .replace(/\D/g, "")
             .slice(0, 10)
         : name === "pincode"
-        ? value.replace(/\D/g, "").slice(0, 6)
+        ? value
+            .replace(/\D/g, "")
+            .slice(0, 6)
+        : name === "gstin"
+        ? value.toUpperCase()
         : value;
 
-    // State changed
+    // ========================================================
+    // STATE CHANGE
+    // ========================================================
+
     if (name === "state") {
       setAvailableCities(
         INDIA_STATES_CITIES[value] || []
@@ -260,6 +327,10 @@ export default function Checkout() {
 
       return;
     }
+
+    // ========================================================
+    // NORMAL INPUT
+    // ========================================================
 
     setFormData((prev) => ({
       ...prev,
@@ -277,12 +348,12 @@ export default function Checkout() {
   const handleCheckoutSubmit = async (e) => {
     e.preventDefault();
 
-    // ----------------------------------------------------------
-    // SECOND LOGIN CHECK
-    // ----------------------------------------------------------
+    // ========================================================
+    // LOGIN IS COMPULSORY
+    // ========================================================
 
     try {
-      const loginResponse = await fetch(
+      const response = await fetch(
         `${API_BASE_URL}/api/orders/current-user/`,
         {
           method: "GET",
@@ -290,13 +361,17 @@ export default function Checkout() {
         }
       );
 
-      if (!loginResponse.ok) {
+      const data = await response.json();
+
+      if (
+        !response.ok ||
+        !data.authenticated
+      ) {
         toast.error(
-          "Your login session has expired. Please login again."
+          "Please login before purchasing."
         );
 
         navigate("/login", {
-          replace: true,
           state: {
             from: "/checkout",
           },
@@ -305,12 +380,16 @@ export default function Checkout() {
         return;
       }
     } catch (error) {
-      console.error("AUTH CHECK ERROR:", error);
+      console.error(
+        "Login verification error:",
+        error
+      );
 
-      toast.error("Please login before purchasing.");
+      toast.error(
+        "Please login before purchasing."
+      );
 
       navigate("/login", {
-        replace: true,
         state: {
           from: "/checkout",
         },
@@ -319,36 +398,40 @@ export default function Checkout() {
       return;
     }
 
-    // ----------------------------------------------------------
+    // ========================================================
     // MOBILE VALIDATION
-    // ----------------------------------------------------------
+    // ========================================================
 
     if (!/^[6-9]\d{9}$/.test(formData.phone)) {
       toast.error(
         "Please enter a valid Indian mobile number."
       );
+
       return;
     }
 
-    // ----------------------------------------------------------
+    // ========================================================
     // EMAIL VALIDATION
-    // ----------------------------------------------------------
+    // ========================================================
 
     if (
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
         formData.email
       ) ||
-      /@gamil\.com$/i.test(formData.email)
+      /@gamil\.com$/i.test(
+        formData.email
+      )
     ) {
       toast.error(
         "Please enter a valid email address."
       );
+
       return;
     }
 
-    // ----------------------------------------------------------
+    // ========================================================
     // NAME + ADDRESS VALIDATION
-    // ----------------------------------------------------------
+    // ========================================================
 
     if (
       !formData.name.trim() ||
@@ -362,12 +445,13 @@ export default function Checkout() {
       toast.error(
         "Please complete your name and delivery address with a valid 6-digit PIN."
       );
+
       return;
     }
 
-    // ----------------------------------------------------------
+    // ========================================================
     // SAVE CUSTOMER INFORMATION
-    // ----------------------------------------------------------
+    // ========================================================
 
     if (formData.saveInfo) {
       const dataToSave = {
@@ -386,9 +470,9 @@ export default function Checkout() {
       );
     }
 
-    // ----------------------------------------------------------
+    // ========================================================
     // GO TO PAYMENT
-    // ----------------------------------------------------------
+    // ========================================================
 
     navigate("/payment", {
       state: {
@@ -402,21 +486,20 @@ export default function Checkout() {
   };
 
   // ============================================================
-  // LOGIN CHECK SCREEN
+  // SHOW LOGIN CHECKING
   // ============================================================
 
   if (checkingLogin) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <Lock
+            size={32}
+            className="mx-auto mb-4 text-orange-500"
+          />
 
           <p className="text-sm font-black text-slate-700 uppercase tracking-widest">
-            Verifying Login...
-          </p>
-
-          <p className="text-xs text-gray-500 mt-2">
-            Please wait
+            Checking Login...
           </p>
         </div>
       </div>
@@ -437,13 +520,17 @@ export default function Checkout() {
 
   return (
     <div className="bg-slate-50 min-h-screen font-sans pb-24 pt-6 sm:pt-12">
+
       <div className="max-w-[1300px] mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* Header Section */}
+        {/* =====================================================
+            HEADER
+        ====================================================== */}
 
         <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 border-b border-gray-200 pb-5">
 
           <div>
+
             <Link
               to="/cart"
               className="inline-flex items-center gap-2 text-gray-500 hover:text-orange-600 text-xs font-black uppercase tracking-widest transition-colors mb-4 w-fit"
@@ -453,37 +540,48 @@ export default function Checkout() {
                 strokeWidth={3}
               />
 
-              Return to Draft
+              Return to Cart
             </Link>
 
             <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tighter uppercase">
               Finalize Procurement
             </h1>
+
           </div>
 
           <div className="text-[11px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-200 px-4 py-2.5 rounded-sm shadow-sm flex items-center gap-2 w-fit">
+
             <Lock size={16} />
 
             256-Bit SSL Secured
+
           </div>
+
         </div>
+
+        {/* =====================================================
+            FORM
+        ====================================================== */}
 
         <form
           onSubmit={handleCheckoutSubmit}
           className="flex flex-col xl:flex-row gap-8 items-start"
         >
 
-          {/* ==================================================
+          {/* ===================================================
               LEFT COLUMN
-          ================================================== */}
+          ==================================================== */}
 
           <div className="w-full xl:w-2/3 space-y-6">
 
-            {/* Business Information */}
+            {/* =================================================
+                BUSINESS INFORMATION
+            ================================================== */}
 
             <div className="bg-white border border-gray-200 shadow-sm rounded-sm p-6 sm:p-8">
 
               <h2 className="text-[15px] sm:text-base font-black mb-6 text-slate-900 uppercase tracking-widest flex items-center gap-3 border-b border-gray-100 pb-4">
+
                 <Building2
                   size={22}
                   className="text-orange-500"
@@ -494,11 +592,15 @@ export default function Checkout() {
                 <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-sm ml-2 tracking-widest">
                   OPTIONAL
                 </span>
+
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
+                {/* Company */}
+
                 <div>
+
                   <label className="block text-[11px] font-black text-slate-700 uppercase tracking-widest mb-1.5">
                     Company / Institution Name
                   </label>
@@ -511,9 +613,13 @@ export default function Checkout() {
                     placeholder="Density Electronics Pvt Ltd"
                     className="w-full border border-gray-300 rounded-sm px-4 py-2.5 text-sm text-slate-900 font-medium focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors bg-white shadow-sm"
                   />
+
                 </div>
 
+                {/* GST */}
+
                 <div>
+
                   <label className="block text-[11px] font-black text-slate-700 uppercase tracking-widest mb-1.5">
                     GSTIN Number
                   </label>
@@ -524,25 +630,31 @@ export default function Checkout() {
                     value={formData.gstin}
                     onChange={handleInputChange}
                     placeholder="27AAAAA0000A1Z5"
-                    className="w-full border border-gray-300 rounded-sm px-4 py-2.5 text-sm text-slate-900 font-medium focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors bg-white uppercase shadow-sm"
                     maxLength="15"
+                    className="w-full border border-gray-300 rounded-sm px-4 py-2.5 text-sm text-slate-900 font-medium focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors bg-white uppercase shadow-sm"
                   />
+
                 </div>
 
               </div>
+
             </div>
 
-            {/* Contact Details */}
+            {/* =================================================
+                CONTACT DETAILS
+            ================================================== */}
 
             <div className="bg-white border border-gray-200 shadow-sm rounded-sm p-6 sm:p-8">
 
               <h2 className="text-[15px] sm:text-base font-black mb-6 text-slate-900 uppercase tracking-widest flex items-center gap-3 border-b border-gray-100 pb-4">
+
                 <User
                   size={22}
                   className="text-orange-500"
                 />
 
                 Point of Contact
+
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -552,10 +664,13 @@ export default function Checkout() {
                 <div className="md:col-span-2">
 
                   <label className="block text-[11px] font-black text-slate-700 uppercase tracking-widest mb-1.5">
+
                     Full Name{" "}
+
                     <span className="text-red-500">
                       *
                     </span>
+
                   </label>
 
                   <input
@@ -564,8 +679,10 @@ export default function Checkout() {
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
+                    placeholder="Enter full name"
                     className="w-full border border-gray-300 rounded-sm px-4 py-2.5 text-sm text-slate-900 font-medium focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors bg-white shadow-sm"
                   />
+
                 </div>
 
                 {/* Mobile */}
@@ -573,10 +690,13 @@ export default function Checkout() {
                 <div>
 
                   <label className="block text-[11px] font-black text-slate-700 uppercase tracking-widest mb-1.5">
+
                     Mobile Number{" "}
+
                     <span className="text-red-500">
                       *
                     </span>
+
                   </label>
 
                   <div className="flex shadow-sm rounded-sm">
@@ -598,6 +718,7 @@ export default function Checkout() {
                     />
 
                   </div>
+
                 </div>
 
                 {/* Email */}
@@ -605,10 +726,13 @@ export default function Checkout() {
                 <div>
 
                   <label className="block text-[11px] font-black text-slate-700 uppercase tracking-widest mb-1.5">
+
                     Email Address{" "}
+
                     <span className="text-red-500">
                       *
                     </span>
+
                   </label>
 
                   <input
@@ -624,19 +748,24 @@ export default function Checkout() {
                 </div>
 
               </div>
+
             </div>
 
-            {/* Shipping Logistics */}
+            {/* =================================================
+                SHIPPING
+            ================================================== */}
 
             <div className="bg-white border border-gray-200 shadow-sm rounded-sm p-6 sm:p-8">
 
               <h2 className="text-[15px] sm:text-base font-black mb-6 text-slate-900 uppercase tracking-widest flex items-center gap-3 border-b border-gray-100 pb-4">
+
                 <MapPin
                   size={22}
                   className="text-orange-500"
                 />
 
                 Shipping Logistics
+
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -646,10 +775,13 @@ export default function Checkout() {
                 <div className="md:col-span-2">
 
                   <label className="block text-[11px] font-black text-slate-700 uppercase tracking-widest mb-1.5">
+
                     Complete Delivery Address{" "}
+
                     <span className="text-red-500">
                       *
                     </span>
+
                   </label>
 
                   <input
@@ -669,10 +801,13 @@ export default function Checkout() {
                 <div>
 
                   <label className="block text-[11px] font-black text-slate-700 uppercase tracking-widest mb-1.5">
+
                     State{" "}
+
                     <span className="text-red-500">
                       *
                     </span>
+
                   </label>
 
                   <select
@@ -701,6 +836,7 @@ export default function Checkout() {
                       ))}
 
                   </select>
+
                 </div>
 
                 {/* City */}
@@ -708,10 +844,13 @@ export default function Checkout() {
                 <div>
 
                   <label className="block text-[11px] font-black text-slate-700 uppercase tracking-widest mb-1.5">
+
                     City{" "}
+
                     <span className="text-red-500">
                       *
                     </span>
+
                   </label>
 
                   <select
@@ -739,6 +878,7 @@ export default function Checkout() {
                     )}
 
                   </select>
+
                 </div>
 
                 {/* PIN */}
@@ -746,10 +886,13 @@ export default function Checkout() {
                 <div className="md:col-span-2">
 
                   <label className="block text-[11px] font-black text-slate-700 uppercase tracking-widest mb-1.5">
+
                     Postal Code (PIN){" "}
+
                     <span className="text-red-500">
                       *
                     </span>
+
                   </label>
 
                   <input
@@ -790,12 +933,14 @@ export default function Checkout() {
                 </label>
 
               </div>
+
             </div>
+
           </div>
 
-          {/* ==================================================
+          {/* ===================================================
               RIGHT COLUMN
-          ================================================== */}
+          ==================================================== */}
 
           <div className="w-full xl:w-1/3 sticky top-28 space-y-6">
 
@@ -813,6 +958,7 @@ export default function Checkout() {
                   Payment Summary
 
                 </h2>
+
               </div>
 
               <div className="p-6 sm:p-8">
@@ -822,8 +968,10 @@ export default function Checkout() {
                 <div className="mb-6">
 
                   <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">
+
                     Requisition Items (
                     {cartItems.length})
+
                   </div>
 
                   <div className="space-y-3 max-h-40 overflow-y-auto pr-2 scrollbar-thin">
@@ -836,16 +984,20 @@ export default function Checkout() {
                       >
 
                         <div className="text-xs font-bold text-slate-700 line-clamp-1 flex-1">
+
                           {item.quantity}x{" "}
                           {item.name}
+
                         </div>
 
                         <span className="text-xs font-black text-slate-900 shrink-0">
+
                           ₹
                           {(
                             Number(item.price) *
                             Number(item.quantity)
                           ).toFixed(2)}
+
                         </span>
 
                       </div>
@@ -853,6 +1005,7 @@ export default function Checkout() {
                     ))}
 
                   </div>
+
                 </div>
 
                 {/* Subtotals */}
@@ -880,16 +1033,21 @@ export default function Checkout() {
                     <span className="font-black text-slate-900">
 
                       {shipping === 0 ? (
+
                         <span className="text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-sm text-[10px] uppercase tracking-widest">
                           Complimentary
                         </span>
+
                       ) : (
+
                         `₹${shipping.toFixed(2)}`
+
                       )}
 
                     </span>
 
                   </div>
+
                 </div>
 
                 {/* Total */}
@@ -920,9 +1078,11 @@ export default function Checkout() {
                   type="submit"
                   className="w-full bg-slate-900 hover:bg-black text-white font-black text-[14px] sm:text-[15px] uppercase tracking-widest py-4 rounded-sm shadow-md flex items-center justify-center gap-3 transition-all active:scale-95 border border-slate-800"
                 >
+
                   <CreditCard size={18} />
 
                   Initialize Payment
+
                 </button>
 
               </div>
@@ -941,10 +1101,13 @@ export default function Checkout() {
               </div>
 
             </div>
+
           </div>
 
         </form>
+
       </div>
+
     </div>
   );
 }

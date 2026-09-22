@@ -13,7 +13,7 @@ import {
 import toast from 'react-hot-toast';
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+  import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export default function Payment() {
   const location = useLocation();
@@ -74,9 +74,8 @@ export default function Payment() {
         );
       }
 
-      const amountInPaise = Math.round(totalAmount * 100);
-
-      if (amountInPaise < 100) {
+      // Backend receives INR and converts to Razorpay paise exactly once.
+      if (totalAmount < 1) {
         throw new Error('Minimum payment amount is ₹1.');
       }
 
@@ -96,7 +95,7 @@ export default function Payment() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            amount: amountInPaise,
+            amount: totalAmount,
           }),
         }
       );
@@ -192,6 +191,7 @@ export default function Payment() {
                   },
 
                   body: JSON.stringify({
+
                     razorpay_payment_id:
                       response.razorpay_payment_id,
 
@@ -201,51 +201,32 @@ export default function Payment() {
                     razorpay_signature:
                       response.razorpay_signature,
 
-                    // IMPORTANT:
-                    // Complete customer + delivery
-                    // information is sent to Django.
-                    order: {
-                      customer: {
-                        companyName:
-                          order.customer?.companyName || '',
+                    // CUSTOMER DETAILS
+                    customer_name:
+                      order.customer?.name || '',
 
-                        gstin:
-                          order.customer?.gstin || '',
+                    customer_email:
+                      order.customer?.email || '',
 
-                        name:
-                          order.customer?.name || '',
+                    customer_mobile:
+                      order.customer?.phone || '',
 
-                        phone:
-                          order.customer?.phone || '',
+                    // DELIVERY ADDRESS
+                    delivery_address: [
+                      order.customer?.address || '',
+                      order.customer?.city || '',
+                      order.customer?.state || '',
+                      order.customer?.pincode || '',
+                    ]
+                      .filter(Boolean)
+                      .join(', '),
 
-                        email:
-                          order.customer?.email || '',
+                    // ORDER DETAILS
+                    total_amount:
+                      order.total,
 
-                        address:
-                          order.customer?.address || '',
-
-                        state:
-                          order.customer?.state || '',
-
-                        city:
-                          order.customer?.city || '',
-
-                        pincode:
-                          order.customer?.pincode || '',
-                      },
-
-                      items:
-                        order.items || [],
-
-                      subtotal:
-                        order.subtotal,
-
-                      shipping:
-                        order.shipping,
-
-                      total:
-                        order.total,
-                    },
+                    items:
+                      order.items || [],
                   }),
                 }
               );

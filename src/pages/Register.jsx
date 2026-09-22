@@ -15,18 +15,11 @@ import {
 
 import logo from "../assets/headerlogo33.png";
 
-
-const API_BASE_URL =
-  window.location.hostname === "localhost"
-    ? "http://localhost:8000"
-    : "http://127.0.0.1:8000";
-
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export default function Register() {
-
   const navigate = useNavigate();
   const location = useLocation();
-
 
   // =====================================================
   // REGISTRATION FORM
@@ -34,271 +27,240 @@ export default function Register() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-
 
   // =====================================================
   // OTP STATES
   // =====================================================
 
   const [otp, setOtp] = useState("");
-
   const [otpSent, setOtpSent] = useState(false);
-
   const [resendTimer, setResendTimer] = useState(0);
-
 
   // =====================================================
   // UI STATES
   // =====================================================
 
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] =
+    useState(false);
 
   const [loading, setLoading] = useState(false);
 
   const [message, setMessage] = useState("");
-
   const [error, setError] = useState("");
-
   const [success, setSuccess] = useState("");
-
 
   // =====================================================
   // RESEND OTP TIMER
   // =====================================================
 
   useEffect(() => {
-
     if (resendTimer <= 0) {
       return;
     }
 
     const timer = setInterval(() => {
-
       setResendTimer((previous) => {
-
         if (previous <= 1) {
           clearInterval(timer);
           return 0;
         }
 
         return previous - 1;
-
       });
-
     }, 1000);
 
-
     return () => clearInterval(timer);
-
   }, [resendTimer]);
-
 
   // =====================================================
   // CLEAR MESSAGES
   // =====================================================
 
   const clearMessages = () => {
-
     setMessage("");
     setError("");
     setSuccess("");
-
   };
-
 
   // =====================================================
   // SEND OTP
   // =====================================================
 
   const handleSendOTP = async (event) => {
-
     event.preventDefault();
 
     clearMessages();
 
-
     // ---------------------------------------------
-    // BASIC VALIDATION
+    // NAME VALIDATION
     // ---------------------------------------------
 
     if (!name.trim()) {
-
       setError("Please enter your full name.");
-
       return;
     }
 
+    // ---------------------------------------------
+    // EMAIL VALIDATION
+    // ---------------------------------------------
 
-    if (!email.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
 
+    if (!normalizedEmail) {
       setError("Please enter your email address.");
-
       return;
     }
 
-
-    if (!email.includes("@") || !email.includes(".")) {
-
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
       setError("Please enter a valid email address.");
-
       return;
     }
 
+    // ---------------------------------------------
+    // MOBILE VALIDATION
+    // ---------------------------------------------
+
+    const normalizedMobile = mobile
+      .replace(/\D/g, "")
+      .slice(0, 10);
+
+    if (!normalizedMobile) {
+      setError("Please enter your mobile number.");
+      return;
+    }
+
+    if (!/^[6-9]\d{9}$/.test(normalizedMobile)) {
+      setError("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+
+    // ---------------------------------------------
+    // PASSWORD VALIDATION
+    // ---------------------------------------------
 
     if (!password) {
-
       setError("Please enter a password.");
-
       return;
     }
-
 
     if (password.length < 6) {
-
       setError("Password must be at least 6 characters.");
-
       return;
     }
-
 
     if (!confirmPassword) {
-
       setError("Please confirm your password.");
-
       return;
     }
-
 
     if (password !== confirmPassword) {
-
       setError("Passwords do not match.");
-
       return;
     }
 
+    // ---------------------------------------------
+    // SEND OTP REQUEST
+    // ---------------------------------------------
 
     try {
-
       setLoading(true);
-
 
       const response = await fetch(
         `${API_BASE_URL}/api/orders/send-registration-otp/`,
         {
           method: "POST",
-
           headers: {
             "Content-Type": "application/json",
           },
-
           credentials: "include",
-
           body: JSON.stringify({
             name: name.trim(),
-            email: email.trim().toLowerCase(),
+            email: normalizedEmail,
+            mobile: normalizedMobile,
             password: password,
             confirm_password: confirmPassword,
           }),
         }
       );
 
+      let data = {};
 
-      const data = await response.json();
-
-
-      if (!response.ok || !data.success) {
-
-        setError(
-          data.message ||
-          "Unable to send OTP. Please try again."
-        );
-
-        return;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error("SEND OTP JSON ERROR:", jsonError);
       }
 
+      if (!response.ok || !data.success) {
+        setError(
+          data.message ||
+            "Unable to send OTP. Please try again."
+        );
+        return;
+      }
 
       // ---------------------------------------------
       // OTP SENT SUCCESSFULLY
       // ---------------------------------------------
 
+      setEmail(normalizedEmail);
+      setMobile(normalizedMobile);
       setOtpSent(true);
-
       setOtp("");
-
       setResendTimer(60);
 
       setSuccess(
         "OTP sent successfully! Please check your email."
       );
-
-
     } catch (error) {
-
       console.error("SEND OTP ERROR:", error);
 
       setError(
         "Unable to connect to server. Please try again."
       );
-
     } finally {
-
       setLoading(false);
-
     }
-
   };
-
 
   // =====================================================
   // VERIFY OTP
   // =====================================================
 
   const handleVerifyOTP = async (event) => {
-
     event.preventDefault();
 
     clearMessages();
-
 
     // ---------------------------------------------
     // OTP VALIDATION
     // ---------------------------------------------
 
     if (!otp.trim()) {
-
       setError("Please enter the OTP.");
-
       return;
     }
-
 
     if (!/^\d{6}$/.test(otp)) {
-
       setError("OTP must contain exactly 6 digits.");
-
       return;
     }
 
-
     try {
-
       setLoading(true);
-
 
       const response = await fetch(
         `${API_BASE_URL}/api/orders/verify-registration-otp/`,
         {
           method: "POST",
-
           headers: {
             "Content-Type": "application/json",
           },
-
           credentials: "include",
-
           body: JSON.stringify({
             email: email.trim().toLowerCase(),
             otp: otp.trim(),
@@ -306,20 +268,21 @@ export default function Register() {
         }
       );
 
+      let data = {};
 
-      const data = await response.json();
-
-
-      if (!response.ok || !data.success) {
-
-        setError(
-          data.message ||
-          "Invalid OTP. Please try again."
-        );
-
-        return;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error("VERIFY OTP JSON ERROR:", jsonError);
       }
 
+      if (!response.ok || !data.success) {
+        setError(
+          data.message ||
+            "Invalid OTP. Please try again."
+        );
+        return;
+      }
 
       // ---------------------------------------------
       // REGISTRATION SUCCESS
@@ -329,156 +292,127 @@ export default function Register() {
         "Email verified successfully! Your account has been created."
       );
 
+      // Notify Header.jsx
+      window.dispatchEvent(
+        new Event("customer-auth-changed")
+      );
 
-      // Backend already logs the customer in.
-      // Redirect to previous page if available.
-
-      const redirectTo =
-        location.state?.from || "/";
-
+      // Redirect to previous page if available
+      const redirectTo = location.state?.from || "/";
 
       setTimeout(() => {
-
         navigate(redirectTo, {
           replace: true,
         });
-
       }, 1200);
-
-
     } catch (error) {
-
       console.error("VERIFY OTP ERROR:", error);
 
       setError(
         "Unable to verify OTP. Please try again."
       );
-
     } finally {
-
       setLoading(false);
-
     }
-
   };
-
 
   // =====================================================
   // RESEND OTP
   // =====================================================
 
   const handleResendOTP = async () => {
-
     if (resendTimer > 0 || loading) {
       return;
     }
 
-
     clearMessages();
 
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const normalizedMobile = mobile
+      .replace(/\D/g, "")
+      .slice(0, 10);
 
     try {
-
       setLoading(true);
-
 
       const response = await fetch(
         `${API_BASE_URL}/api/orders/send-registration-otp/`,
         {
           method: "POST",
-
           headers: {
             "Content-Type": "application/json",
           },
-
           credentials: "include",
-
           body: JSON.stringify({
             name: name.trim(),
-            email: email.trim().toLowerCase(),
+            email: normalizedEmail,
+            mobile: normalizedMobile,
             password: password,
             confirm_password: confirmPassword,
           }),
         }
       );
 
+      let data = {};
 
-      const data = await response.json();
-
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        console.error("RESEND OTP JSON ERROR:", jsonError);
+      }
 
       if (!response.ok || !data.success) {
-
         setError(
           data.message ||
-          "Unable to resend OTP."
+            "Unable to resend OTP."
         );
-
         return;
       }
 
-
       setOtp("");
-
       setResendTimer(60);
 
       setSuccess(
         "A new OTP has been sent to your email."
       );
-
-
     } catch (error) {
-
       console.error("RESEND OTP ERROR:", error);
 
       setError(
         "Unable to connect to server."
       );
-
     } finally {
-
       setLoading(false);
-
     }
-
   };
-
 
   // =====================================================
   // CHANGE EMAIL / GO BACK
   // =====================================================
 
   const handleChangeEmail = () => {
-
     clearMessages();
 
     setOtpSent(false);
-
     setOtp("");
-
     setResendTimer(0);
-
   };
-
 
   // =====================================================
   // FORMAT TIMER
   // =====================================================
 
   const formatTimer = () => {
-
     const minutes = Math.floor(resendTimer / 60);
-
     const seconds = resendTimer % 60;
 
     return `${minutes}:${seconds
       .toString()
       .padStart(2, "0")}`;
-
   };
 
-
   return (
-
     <div className="min-h-screen bg-[#eef3f8] relative overflow-hidden">
 
       {/* =================================================
@@ -488,15 +422,13 @@ export default function Register() {
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.35]"
         style={{
-          backgroundImage:
-            `
+          backgroundImage: `
             linear-gradient(rgba(15,23,42,0.035) 1px, transparent 1px),
             linear-gradient(90deg, rgba(15,23,42,0.035) 1px, transparent 1px)
-            `,
+          `,
           backgroundSize: "42px 42px",
         }}
       />
-
 
       {/* =================================================
           TOP NAV
@@ -519,16 +451,11 @@ export default function Register() {
               text-sm
             "
           >
-
             <ArrowLeft size={17} />
-
             Back to Store
-
           </Link>
 
-
           <div className="text-xs sm:text-sm text-slate-500">
-
             Already have an account?
 
             <Link
@@ -542,13 +469,11 @@ export default function Register() {
             >
               Login
             </Link>
-
           </div>
 
         </div>
 
       </div>
-
 
       {/* =================================================
           MAIN
@@ -570,7 +495,6 @@ export default function Register() {
             lg:grid-cols-[0.9fr_1.1fr]
           "
         >
-
 
           {/* =================================================
               LEFT BRAND SECTION
@@ -617,7 +541,6 @@ export default function Register() {
               "
             />
 
-
             <div className="relative z-10">
 
               {/* Logo */}
@@ -638,7 +561,6 @@ export default function Register() {
 
               </div>
 
-
               {/* Badge */}
 
               <div
@@ -658,13 +580,9 @@ export default function Register() {
                   mb-5
                 "
               >
-
                 <ShieldCheck size={14} />
-
                 Secure Customer Registration
-
               </div>
-
 
               <h1
                 className="
@@ -675,19 +593,14 @@ export default function Register() {
                   tracking-tight
                 "
               >
-
                 Build.
                 <br />
-
                 Innovate.
                 <br />
-
                 <span className="text-blue-400">
                   Create.
                 </span>
-
               </h1>
-
 
               <p
                 className="
@@ -699,13 +612,10 @@ export default function Register() {
                   xl:text-base
                 "
               >
-
                 Create your Density Electronics account and
                 explore development boards, sensors, robotics
                 components and electronics products.
-
               </p>
-
 
               {/* Benefits */}
 
@@ -726,16 +636,13 @@ export default function Register() {
                       justify-center
                     "
                   >
-
                     <ShieldCheck
                       size={18}
                       className="text-blue-400"
                     />
-
                   </div>
 
                   <div>
-
                     <p className="text-sm font-semibold">
                       Secure Account
                     </p>
@@ -743,11 +650,9 @@ export default function Register() {
                     <p className="text-xs text-slate-400">
                       Email verification protected
                     </p>
-
                   </div>
 
                 </div>
-
 
                 <div className="flex items-center gap-3">
 
@@ -764,16 +669,13 @@ export default function Register() {
                       justify-center
                     "
                   >
-
                     <Mail
                       size={18}
                       className="text-orange-400"
                     />
-
                   </div>
 
                   <div>
-
                     <p className="text-sm font-semibold">
                       Email OTP
                     </p>
@@ -781,11 +683,9 @@ export default function Register() {
                     <p className="text-xs text-slate-400">
                       Quick and secure verification
                     </p>
-
                   </div>
 
                 </div>
-
 
                 <div className="flex items-center gap-3">
 
@@ -802,16 +702,13 @@ export default function Register() {
                       justify-center
                     "
                   >
-
                     <CheckCircle2
                       size={18}
                       className="text-green-400"
                     />
-
                   </div>
 
                   <div>
-
                     <p className="text-sm font-semibold">
                       Easy Checkout
                     </p>
@@ -819,7 +716,6 @@ export default function Register() {
                     <p className="text-xs text-slate-400">
                       Faster shopping experience
                     </p>
-
                   </div>
 
                 </div>
@@ -827,7 +723,6 @@ export default function Register() {
               </div>
 
             </div>
-
 
             <div
               className="
@@ -838,13 +733,10 @@ export default function Register() {
                 pt-8
               "
             >
-
               © {new Date().getFullYear()} Density Electronics
-
             </div>
 
           </section>
-
 
           {/* =================================================
               RIGHT FORM SECTION
@@ -871,10 +763,7 @@ export default function Register() {
 
             </div>
 
-
-            {/* =================================================
-                FORM HEADER
-            ================================================= */}
+            {/* FORM HEADER */}
 
             <div className="max-w-xl mx-auto">
 
@@ -896,11 +785,8 @@ export default function Register() {
                         mb-4
                       "
                     >
-
                       <UserPlus size={23} />
-
                     </div>
-
 
                     <h2
                       className="
@@ -911,28 +797,19 @@ export default function Register() {
                         tracking-tight
                       "
                     >
-
                       Create your account
-
                     </h2>
 
-
                     <p className="mt-2 text-slate-500 text-sm">
-
                       Join Density Electronics and start
                       exploring electronics & robotics.
-
                     </p>
 
                   </div>
 
-
-                  {/* =================================================
-                      ALERTS
-                  ================================================= */}
+                  {/* ALERTS */}
 
                   {error && (
-
                     <div
                       className="
                         mb-5
@@ -946,16 +823,11 @@ export default function Register() {
                         text-red-700
                       "
                     >
-
                       {error}
-
                     </div>
-
                   )}
 
-
                   {success && (
-
                     <div
                       className="
                         mb-5
@@ -969,17 +841,11 @@ export default function Register() {
                         text-green-700
                       "
                     >
-
                       {success}
-
                     </div>
-
                   )}
 
-
-                  {/* =================================================
-                      REGISTRATION FORM
-                  ================================================= */}
+                  {/* REGISTRATION FORM */}
 
                   <form
                     onSubmit={handleSendOTP}
@@ -999,11 +865,8 @@ export default function Register() {
                           mb-2
                         "
                       >
-
                         Full Name
-
                       </label>
-
 
                       <input
                         type="text"
@@ -1035,6 +898,57 @@ export default function Register() {
 
                     </div>
 
+                    {/* MOBILE */}
+
+                    <div>
+
+                      <label
+                        className="
+                          block
+                          text-sm
+                          font-semibold
+                          text-slate-700
+                          mb-2
+                        "
+                      >
+                        Mobile Number
+                      </label>
+
+                      <input
+                        type="tel"
+                        value={mobile}
+                        onChange={(event) => {
+                          const value =
+                            event.target.value
+                              .replace(/\D/g, "")
+                              .slice(0, 10);
+
+                          setMobile(value);
+                        }}
+                        placeholder="Enter 10-digit mobile number"
+                        autoComplete="tel"
+                        maxLength={10}
+                        disabled={loading}
+                        className="
+                          w-full
+                          h-12
+                          px-4
+                          rounded-xl
+                          border
+                          border-slate-200
+                          bg-slate-50
+                          text-slate-900
+                          outline-none
+                          transition
+                          focus:bg-white
+                          focus:border-blue-500
+                          focus:ring-4
+                          focus:ring-blue-500/10
+                          disabled:opacity-60
+                        "
+                      />
+
+                    </div>
 
                     {/* EMAIL */}
 
@@ -1049,11 +963,8 @@ export default function Register() {
                           mb-2
                         "
                       >
-
                         Email Address
-
                       </label>
-
 
                       <div className="relative">
 
@@ -1067,7 +978,6 @@ export default function Register() {
                             text-slate-400
                           "
                         />
-
 
                         <input
                           type="email"
@@ -1102,7 +1012,6 @@ export default function Register() {
 
                     </div>
 
-
                     {/* PASSWORD */}
 
                     <div>
@@ -1116,11 +1025,8 @@ export default function Register() {
                           mb-2
                         "
                       >
-
                         Password
-
                       </label>
-
 
                       <div className="relative">
 
@@ -1157,7 +1063,6 @@ export default function Register() {
                           "
                         />
 
-
                         <button
                           type="button"
                           onClick={() =>
@@ -1174,19 +1079,16 @@ export default function Register() {
                             hover:text-slate-700
                           "
                         >
-
                           {showPassword ? (
                             <EyeOff size={19} />
                           ) : (
                             <Eye size={19} />
                           )}
-
                         </button>
 
                       </div>
 
                     </div>
-
 
                     {/* CONFIRM PASSWORD */}
 
@@ -1201,11 +1103,8 @@ export default function Register() {
                           mb-2
                         "
                       >
-
                         Confirm Password
-
                       </label>
-
 
                       <div className="relative">
 
@@ -1244,7 +1143,6 @@ export default function Register() {
                           "
                         />
 
-
                         <button
                           type="button"
                           onClick={() =>
@@ -1261,19 +1159,16 @@ export default function Register() {
                             hover:text-slate-700
                           "
                         >
-
                           {showConfirmPassword ? (
                             <EyeOff size={19} />
                           ) : (
                             <Eye size={19} />
                           )}
-
                         </button>
 
                       </div>
 
                     </div>
-
 
                     {/* SEND OTP BUTTON */}
 
@@ -1282,7 +1177,6 @@ export default function Register() {
                       disabled={loading}
                       className="
                         w-full
-                        h-13
                         min-h-[52px]
                         rounded-xl
                         bg-blue-600
@@ -1301,32 +1195,21 @@ export default function Register() {
                         disabled:cursor-not-allowed
                       "
                     >
-
                       {loading ? (
-
                         <>
                           <RefreshCw
                             size={18}
                             className="animate-spin"
                           />
-
                           Sending OTP...
-
                         </>
-
                       ) : (
-
                         <>
                           Send Verification OTP
-
                           <ArrowRight size={18} />
-
                         </>
-
                       )}
-
                     </button>
-
 
                     <p
                       className="
@@ -1336,23 +1219,17 @@ export default function Register() {
                         leading-5
                       "
                     >
-
                       By creating an account, you agree to
                       our terms and acknowledge our privacy policy.
-
                     </p>
 
                   </form>
-
                 </>
 
               ) : (
 
-                /* =================================================
-                   OTP SCREEN
-                ================================================= */
-
                 <>
+                  {/* OTP HEADER */}
 
                   <div className="mb-8">
 
@@ -1371,13 +1248,9 @@ export default function Register() {
                         transition
                       "
                     >
-
                       <ArrowLeft size={16} />
-
                       Change email
-
                     </button>
-
 
                     <div
                       className="
@@ -1392,11 +1265,8 @@ export default function Register() {
                         mb-4
                       "
                     >
-
                       <Mail size={23} />
-
                     </div>
-
 
                     <h2
                       className="
@@ -1407,11 +1277,8 @@ export default function Register() {
                         tracking-tight
                       "
                     >
-
                       Verify your email
-
                     </h2>
-
 
                     <p
                       className="
@@ -1421,26 +1288,19 @@ export default function Register() {
                         leading-6
                       "
                     >
-
                       We've sent a 6-digit verification code
                       to
-
                       <span className="font-semibold text-slate-800">
                         {" "}
                         {email}
                       </span>
-
                     </p>
 
                   </div>
 
-
-                  {/* =================================================
-                      ALERTS
-                  ================================================= */}
+                  {/* ALERTS */}
 
                   {error && (
-
                     <div
                       className="
                         mb-5
@@ -1454,16 +1314,11 @@ export default function Register() {
                         text-red-700
                       "
                     >
-
                       {error}
-
                     </div>
-
                   )}
 
-
                   {success && (
-
                     <div
                       className="
                         mb-5
@@ -1477,17 +1332,11 @@ export default function Register() {
                         text-green-700
                       "
                     >
-
                       {success}
-
                     </div>
-
                   )}
 
-
-                  {/* =================================================
-                      OTP FORM
-                  ================================================= */}
+                  {/* OTP FORM */}
 
                   <form
                     onSubmit={handleVerifyOTP}
@@ -1505,11 +1354,8 @@ export default function Register() {
                           mb-3
                         "
                       >
-
                         Enter Verification Code
-
                       </label>
-
 
                       <input
                         type="text"
@@ -1517,14 +1363,12 @@ export default function Register() {
                         maxLength={6}
                         value={otp}
                         onChange={(event) => {
-
                           const value =
                             event.target.value
                               .replace(/\D/g, "")
                               .slice(0, 6);
 
                           setOtp(value);
-
                         }}
                         placeholder="000000"
                         autoComplete="one-time-code"
@@ -1553,7 +1397,6 @@ export default function Register() {
                         "
                       />
 
-
                       <p
                         className="
                           mt-3
@@ -1562,13 +1405,10 @@ export default function Register() {
                           text-center
                         "
                       >
-
                         Enter the 6-digit code from your email.
-
                       </p>
 
                     </div>
-
 
                     {/* VERIFY BUTTON */}
 
@@ -1598,36 +1438,23 @@ export default function Register() {
                         disabled:cursor-not-allowed
                       "
                     >
-
                       {loading ? (
-
                         <>
                           <RefreshCw
                             size={18}
                             className="animate-spin"
                           />
-
                           Verifying...
-
                         </>
-
                       ) : (
-
                         <>
                           <ShieldCheck size={18} />
-
                           Verify & Create Account
-
                         </>
-
                       )}
-
                     </button>
 
-
-                    {/* =================================================
-                        RESEND OTP
-                    ================================================= */}
+                    {/* RESEND OTP */}
 
                     <div
                       className="
@@ -1640,7 +1467,6 @@ export default function Register() {
                     >
 
                       {resendTimer > 0 ? (
-
                         <div
                           className="
                             inline-flex
@@ -1650,7 +1476,6 @@ export default function Register() {
                             text-slate-500
                           "
                         >
-
                           <Clock3 size={16} />
 
                           Resend OTP in
@@ -1658,11 +1483,8 @@ export default function Register() {
                           <span className="font-semibold text-slate-700">
                             {formatTimer()}
                           </span>
-
                         </div>
-
                       ) : (
-
                         <button
                           type="button"
                           onClick={handleResendOTP}
@@ -1678,15 +1500,10 @@ export default function Register() {
                             disabled:opacity-50
                           "
                         >
-
                           <RefreshCw size={16} />
-
                           Resend OTP
-
                         </button>
-
                       )}
-
 
                       <button
                         type="button"
@@ -1698,20 +1515,15 @@ export default function Register() {
                           hover:text-slate-600
                         "
                       >
-
                         Didn't receive the code?
                         Check spam or change your email.
-
                       </button>
 
                     </div>
 
                   </form>
 
-
-                  {/* =================================================
-                      SECURITY NOTE
-                  ================================================= */}
+                  {/* SECURITY NOTE */}
 
                   <div
                     className="
@@ -1744,9 +1556,7 @@ export default function Register() {
                           text-slate-800
                         "
                       >
-
                         Your account is protected
-
                       </p>
 
                       <p
@@ -1757,10 +1567,8 @@ export default function Register() {
                           leading-5
                         "
                       >
-
                         Email verification helps keep your
                         Density Electronics account secure.
-
                       </p>
 
                     </div>
@@ -1768,7 +1576,6 @@ export default function Register() {
                   </div>
 
                 </>
-
               )}
 
             </div>
@@ -1777,10 +1584,7 @@ export default function Register() {
 
         </div>
 
-
-        {/* =================================================
-            MOBILE FOOTER
-        ================================================= */}
+        {/* MOBILE FOOTER */}
 
         <div
           className="
@@ -1791,17 +1595,13 @@ export default function Register() {
             text-slate-400
           "
         >
-
           © {new Date().getFullYear()} Density Electronics
           <span className="mx-2">•</span>
           Electronics & Robotics Store
-
         </div>
 
       </main>
 
     </div>
-
   );
-
 }
